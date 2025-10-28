@@ -1,43 +1,44 @@
 package com.reacttest
 
-import android.app.Application
 import com.facebook.react.PackageList
 import com.facebook.react.ReactApplication
-import com.facebook.react.ReactHost
 import com.facebook.react.ReactNativeHost
 import com.facebook.react.ReactPackage
-import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.load
-import com.facebook.react.defaults.DefaultReactHost.getDefaultReactHost
-import com.facebook.react.defaults.DefaultReactNativeHost
 import com.facebook.soloader.SoLoader
+import com.facebook.react.defaults.DefaultReactNativeHost
+import com.clevertap.react.CleverTapPackage
+import com.clevertap.react.CleverTapApplication
+import com.clevertap.android.sdk.CleverTapAPI
+import com.clevertap.android.sdk.CleverTapAPI.LogLevel
+import com.clevertap.android.sdk.ActivityLifecycleCallback
 
-class MainApplication : Application(), ReactApplication {
+class MainApplication : CleverTapApplication(), ReactApplication {
 
-  override val reactNativeHost: ReactNativeHost =
-      object : DefaultReactNativeHost(this) {
-        override fun getPackages(): List<ReactPackage> =
-            PackageList(this).packages.apply {
-              // Packages that cannot be autolinked yet can be added manually here, for example:
-              // add(MyReactNativePackage())
-            }
-
-        override fun getJSMainModuleName(): String = "index"
-
+    override val reactNativeHost: ReactNativeHost = object : DefaultReactNativeHost(this) {
         override fun getUseDeveloperSupport(): Boolean = BuildConfig.DEBUG
 
-        override val isNewArchEnabled: Boolean = BuildConfig.IS_NEW_ARCHITECTURE_ENABLED
-        override val isHermesEnabled: Boolean = BuildConfig.IS_HERMES_ENABLED
-      }
+        override fun getPackages(): MutableList<ReactPackage> {
+            val packages = PackageList(this).packages
+            packages.add(CleverTapPackage()) // keep if autolink fails
+            return packages
+        }
 
-  override val reactHost: ReactHost
-    get() = getDefaultReactHost(applicationContext, reactNativeHost)
-
-  override fun onCreate() {
-    super.onCreate()
-    SoLoader.init(this, false)
-    if (BuildConfig.IS_NEW_ARCHITECTURE_ENABLED) {
-      // If you opted-in for the New Architecture, we load the native entry point for this app.
-      load()
+        override fun getJSMainModuleName(): String = "index"
     }
-  }
+
+    override fun onCreate() {
+        // CleverTap verbose logs for dev
+        CleverTapAPI.setDebugLevel(LogLevel.VERBOSE)
+
+        super.onCreate()
+
+        // Register CleverTap lifecycle helper if required by the SDK
+        try {
+            ActivityLifecycleCallback.register(this)
+        } catch (_: Throwable) {
+            // ignore if not required or already registered
+        }
+
+        SoLoader.init(this, /* native exopackage */ false)
+    }
 }
